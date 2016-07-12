@@ -60,7 +60,7 @@ import retrofit.http.HEAD;
  */
 public class LoginImpl {
 
-    private static final int REQUEST_GOOGLE_SIGN_IN = 1001;
+    private static final int REQUEST_GOOGLE_SIGN_IN = 9001;
     private static final String TAG = LoginImpl.class.getSimpleName();
 
     private final LoginListener mListener;
@@ -87,12 +87,15 @@ public class LoginImpl {
     }
 
     private void initializeGoogleLogin() {
-        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).requestScopes(new Scope(Scopes.DRIVE_APPFOLDER))
-                .requestEmail().requestIdToken(getContext().getString(R.string.server_client_id))
-                .requestServerAuthCode(getContext().getString(R.string.server_client_id))
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//                .requestScopes(new Scope(Scopes.DRIVE_APPFOLDER))
+                .requestIdToken(getContext().getString(R.string.server_client_id))
+                .requestEmail()
+                .requestServerAuthCode(getContext().getString(R.string.server_client_id),false)
                 .build();
 
         Context context = getContext();
+        Logger.d("google", context.getPackageName() + " " + context.getPackageCodePath());
         if (context != null) {
             mGoogleApiClient = new GoogleApiClient.Builder(context)
                     .enableAutoManage(activityWeakReference != null ? activityWeakReference.get() : fragmentWeakReference.get().getActivity(), mConnectionFailedListener)
@@ -155,14 +158,59 @@ public class LoginImpl {
         }
     }
 
+    private String get_google_access_token(String token){
+        Map<String, String> header = new HashMap<>();
+        header.put("code",token);
+        header.put("client_id",getContext().getString(R.string.server_client_id));
+        header.put("client_secret",getContext().getString(R.string.server_secret_id));
+        header.put("access_type","offline");
+        header.put("grant_type","authorization_code");
+
+        NetworkDataProvider.doGetCallAsync(Urls.getGoogleConvertTokenUrl(), header, new Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+                Log.i("TAG", "Login error ");
+                MainApplication.getInstance().getMainThreadHandler().post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mListener.showHideProgress(false, null);
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Response response) throws IOException {
+                String responseString = response.body().string();
+                Logger.d("LoginImpl", "onResponse: " + responseString);
+                JsonArray array = JsonHelper.StringToJsonArray(responseString);
+                final JsonObject element = array.get(0).getAsJsonObject();
+                Log.i("LoginImpl", "element: " + element.toString());
+                MainApplication.getInstance().getMainThreadHandler().post(new Runnable() {
+                    @Override
+                    public void run() {
+                        userLoginSuccess(element);
+                    }
+                });
+
+            }
+        });
+
+
+        return token;
+    }
+
     private void verifyUserDetails(String userEmail, String token, boolean isFbLogin) {
 
         mListener.showHideProgress(true, getContext().getString(R.string.login));
+        Logger.d("google", "This is the token ###" + token);
         Map<String, String> header = new HashMap<>();
         if (isFbLogin) {
             header.put("Authorization", "Bearer facebook " + token);
         } else {
+
+            token = get_google_access_token(token);
             header.put("Authorization", "Bearer google-oauth2 " + token);
+            Logger.d("google auth token ", token);
         }
 
         NetworkDataProvider.doGetCallAsync(Urls.getLoginUrl(userEmail), header, new Callback() {
@@ -299,6 +347,8 @@ public class LoginImpl {
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Logger.d("google", data.getDataString() +  requestCode);
+
         switch (requestCode) {
             case REQUEST_GOOGLE_SIGN_IN:
                 GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
@@ -310,11 +360,14 @@ public class LoginImpl {
     }
 
     private void handleGoogleSignInResult(GoogleSignInResult result) {
+        Logger.d("google", Boolean.toString(result.isSuccess()) + " -- "
+                +result.getStatus().getStatusCode() + " 99 "+result.getStatus().getStatusMessage());
         if (result.isSuccess()) {
             GoogleSignInAccount acct = result.getSignInAccount();
             Logger.d("google", "email: " + acct.getEmail() + " Name : " + acct.getDisplayName() + " token " + acct.getIdToken() + "auth :  "+acct.getServerAuthCode());
             verifyUserDetails(acct.getEmail(), acct.getServerAuthCode(), false);
         } else {
+            Logger.d("google" ,result.getStatus().getStatusMessage());
             Logger.d("google", "failed");
             MainApplication.getInstance().showToast(R.string.login_error);
         }

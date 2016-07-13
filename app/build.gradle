@@ -32,9 +32,16 @@ android {
         generatedDensities = []
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled false
-        signingConfig signingConfigs.debug
+        signingConfig signingConfigs.release
     }
     signingConfigs {
+        release {
+            storeFile file("impactRunKeyStore.jks")
+            storePassword "greenfreedom"
+            keyAlias "impactRun"
+            keyPassword "greenfreedom"
+        }
+
         debug {
             keyAlias 'impactRunP'
             keyPassword 'greenfreedom'
@@ -59,10 +66,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
         debug {
             debuggable true
+            signingConfig signingConfigs.debug
+
         }
     }
 
@@ -72,7 +81,6 @@ android {
         beta {
             minSdkVersion 19
             applicationId 'com.sharesmile.share'
-            signingConfig signingConfigs.debug
         }
     }
     aaptOptions {

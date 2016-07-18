@@ -2,6 +2,8 @@ package com.sharesmile.share.rfac;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.media.Ringtone;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -9,6 +11,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.media.RingtoneManager;
 
 import com.google.android.gms.gcm.GcmNetworkManager;
 import com.google.android.gms.gcm.OneoffTask;
@@ -275,6 +278,13 @@ public class RealRunFragment extends RunFragment {
 
     private void showMinDistanceDialog() {
         final AlertDialog.Builder alertDialog = new AlertDialog.Builder(getActivity());
+        try {
+            Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            Ringtone r = RingtoneManager.getRingtone(getActivity().getApplicationContext(), notification);
+            r.play();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         alertDialog.setTitle(getString(R.string.dialog_title_min_distance));
         alertDialog.setMessage(getString(R.string.dialog_msg_min_distance, mCauseData.getMinDistance()));
         alertDialog.setPositiveButton(getString(R.string.dialog_positive_button_min_distance), new DialogInterface.OnClickListener() {

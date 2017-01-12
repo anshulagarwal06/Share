@@ -148,6 +148,7 @@ public class LeaderBoardFragment extends BaseFragment implements LeaderBoardAdap
         }
         if (mBoard == BOARD_TYPE.LEADERBOARD) {
             EventBus.getDefault().register(this);
+            fetchLeaderBoardDataFromDb();
         }
         mRecyclerView.setAdapter(mLeaderBoardAdapter);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
